@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Quote",
+  "type": "object",
+  "required": ["ticket_id", "vendor_id", "total_amount"],
+  "properties": {
+    "ticket_id": { "type": "string", "format": "uuid" },
+    "work_order_id": { "type": ["string", "null"], "format": "uuid" },
+    "vendor_id": { "type": "string", "format": "uuid" },
+    "total_amount": { "type": "number", "minimum": 0 },
+    "labor_amount": { "type": ["number", "null"], "minimum": 0 },
+    "materials_amount": { "type": ["number", "null"], "minimum": 0 },
+    "warranty_terms": { "type": ["string", "null"] },
+    "earliest_availability": { "type": ["string", "null"], "format": "date" },
+    "exclusions": { "type": ["string", "null"] },
+    "status": {
+      "type": "string",
+      "enum": ["received", "normalized", "recommended", "approved", "declined", "expired"]
+    }
+  }
+}

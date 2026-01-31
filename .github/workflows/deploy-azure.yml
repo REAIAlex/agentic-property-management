@@ -1,0 +1,86 @@
+name: Build and Deploy to Azure
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  REGISTRY: agenticpmacr.azurecr.io
+  RESOURCE_GROUP: agentic-pm-rg
+  CONTAINER_APP_ENV: agentic-pm-env
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install API dependencies
+        run: pip install -r apps/api/requirements.txt
+
+      - name: Run linter
+        run: |
+          pip install ruff
+          ruff check apps/api/
+
+  build-and-deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Log in to ACR
+        run: az acr login --name agenticpmacr
+
+      - name: Build and push API image
+        run: |
+          docker build \
+            -t ${{ env.REGISTRY }}/api:${{ github.sha }} \
+            -t ${{ env.REGISTRY }}/api:latest \
+            -f apps/api/Dockerfile .
+          docker push ${{ env.REGISTRY }}/api:${{ github.sha }}
+          docker push ${{ env.REGISTRY }}/api:latest
+
+      - name: Build and push Agent Runner image
+        run: |
+          docker build \
+            -t ${{ env.REGISTRY }}/agent-runner:${{ github.sha }} \
+            -t ${{ env.REGISTRY }}/agent-runner:latest \
+            -f apps/agent-runner/Dockerfile .
+          docker push ${{ env.REGISTRY }}/agent-runner:${{ github.sha }}
+          docker push ${{ env.REGISTRY }}/agent-runner:latest
+
+      - name: Deploy API to Container Apps
+        run: |
+          az containerapp update \
+            --name agentic-pm-api \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --image ${{ env.REGISTRY }}/api:${{ github.sha }} \
+            --set-env-vars \
+              DATABASE_URL=secretref:database-url \
+              TWILIO_ACCOUNT_SID=secretref:twilio-sid \
+              TWILIO_AUTH_TOKEN=secretref:twilio-token \
+              ANTHROPIC_API_KEY=secretref:anthropic-key \
+              STRIPE_SECRET_KEY=secretref:stripe-key \
+              SENDGRID_API_KEY=secretref:sendgrid-key
+
+      - name: Deploy Agent Runner to Container Apps
+        run: |
+          az containerapp update \
+            --name agentic-pm-agents \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --image ${{ env.REGISTRY }}/agent-runner:${{ github.sha }} \
+            --set-env-vars \
+              ANTHROPIC_API_KEY=secretref:anthropic-key \
+              API_BASE_URL=https://agentic-pm-api.internal

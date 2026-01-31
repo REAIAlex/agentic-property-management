@@ -1,0 +1,21 @@
+{
+  "recommendations": [
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "ms-python.black-formatter",
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "ms-azuretools.vscode-docker",
+    "ms-vscode.azure-account",
+    "ms-azuretools.vscode-azurecontainerapps",
+    "ms-azuretools.vscode-azureresourcegroups",
+    "github.vscode-github-actions",
+    "github.remotehub",
+    "github.codespaces",
+    "github.vscode-pull-request-github",
+    "ckolkman.vscode-postgres",
+    "humao.rest-client",
+    "redhat.vscode-yaml",
+    "mikestead.dotenv"
+  ]
+}

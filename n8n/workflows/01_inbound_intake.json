@@ -1,0 +1,91 @@
+{
+  "name": "01 - Inbound Message to Ticket + Triage",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "inbound-message",
+        "responseMode": "responseNode"
+      },
+      "name": "Webhook - Inbound Message",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.API_BASE_URL}}/events",
+        "method": "POST",
+        "body": {
+          "event_type": "inbound_message",
+          "payload": "={{$json}}"
+        }
+      },
+      "name": "Forward to API Events",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.escalation_required}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "Is Emergency?",
+      "type": "n8n-nodes-base.if",
+      "position": [750, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.AGENT_RUNNER_URL}}/run",
+        "method": "POST",
+        "body": {
+          "agent_name": "intake_triage",
+          "context": "={{$json}}",
+          "ticket_id": "={{$json.ticket_id}}"
+        }
+      },
+      "name": "Run Intake Triage Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1000, 400]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.AGENT_RUNNER_URL}}/run",
+        "method": "POST",
+        "body": {
+          "agent_name": "customer_comms",
+          "context": {
+            "action": "emergency_notification",
+            "ticket": "={{$json}}"
+          }
+        }
+      },
+      "name": "Emergency Notification",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1000, 200]
+    }
+  ],
+  "connections": {
+    "Webhook - Inbound Message": {
+      "main": [
+        [{ "node": "Forward to API Events", "type": "main", "index": 0 }]
+      ]
+    },
+    "Forward to API Events": {
+      "main": [
+        [{ "node": "Is Emergency?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Is Emergency?": {
+      "main": [
+        [{ "node": "Emergency Notification", "type": "main", "index": 0 }],
+        [{ "node": "Run Intake Triage Agent", "type": "main", "index": 0 }]
+      ]
+    }
+  }
+}

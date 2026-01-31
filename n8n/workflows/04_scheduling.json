@@ -1,0 +1,80 @@
+{
+  "name": "04 - Approval to Scheduling + Notifications",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "owner-approved",
+        "responseMode": "lastNode"
+      },
+      "name": "Webhook - Owner Approved",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.API_BASE_URL}}/events",
+        "method": "POST",
+        "body": {
+          "event_type": "owner_approved",
+          "ticket_id": "={{$json.ticket_id}}",
+          "payload": {
+            "approved_amount": "={{$json.approved_amount}}",
+            "approved_vendor_id": "={{$json.approved_vendor_id}}"
+          }
+        }
+      },
+      "name": "Record Approval",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.AGENT_RUNNER_URL}}/run",
+        "method": "POST",
+        "body": {
+          "agent_name": "scheduling_access",
+          "context": "={{$json}}",
+          "ticket_id": "={{$json.ticket_id}}"
+        }
+      },
+      "name": "Run Scheduling Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [750, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.AGENT_RUNNER_URL}}/run",
+        "method": "POST",
+        "body": {
+          "agent_name": "customer_comms",
+          "context": {
+            "action": "appointment_confirmation",
+            "scheduling": "={{$json.output}}"
+          },
+          "ticket_id": "={{$json.context.ticket_id}}"
+        }
+      },
+      "name": "Send Confirmations",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1000, 300]
+    }
+  ],
+  "connections": {
+    "Webhook - Owner Approved": {
+      "main": [
+        [{ "node": "Record Approval", "type": "main", "index": 0 }]
+      ]
+    },
+    "Record Approval": {
+      "main": [
+        [{ "node": "Run Scheduling Agent", "type": "main", "index": 0 }]
+      ]
+    },
+    "Run Scheduling Agent": {
+      "main": [
+        [{ "node": "Send Confirmations", "type": "main", "index": 0 }]
+      ]
+    }
+  }
+}

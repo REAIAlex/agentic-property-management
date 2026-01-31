@@ -1,0 +1,93 @@
+{
+  "name": "02 - Vendor Dispatch + Quote Deadline",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "dispatch-vendors",
+        "responseMode": "lastNode"
+      },
+      "name": "Webhook - Dispatch Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.AGENT_RUNNER_URL}}/run",
+        "method": "POST",
+        "body": {
+          "agent_name": "scope_drafting",
+          "context": "={{$json}}",
+          "ticket_id": "={{$json.ticket_id}}"
+        }
+      },
+      "name": "Run Scope Drafting",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.AGENT_RUNNER_URL}}/run",
+        "method": "POST",
+        "body": {
+          "agent_name": "vendor_dispatch",
+          "context": {
+            "ticket": "={{$json.context}}",
+            "scope": "={{$json.output}}"
+          },
+          "ticket_id": "={{$json.context.ticket_id}}"
+        }
+      },
+      "name": "Run Vendor Dispatch",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [750, 300]
+    },
+    {
+      "parameters": {
+        "amount": 48,
+        "unit": "hours"
+      },
+      "name": "Wait for Quote Deadline",
+      "type": "n8n-nodes-base.wait",
+      "position": [1000, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.API_BASE_URL}}/events",
+        "method": "POST",
+        "body": {
+          "event_type": "timer_fired",
+          "ticket_id": "={{$json.context.ticket_id}}",
+          "payload": {
+            "timer_name": "quote_deadline"
+          }
+        }
+      },
+      "name": "Fire Quote Deadline Timer",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1250, 300]
+    }
+  ],
+  "connections": {
+    "Webhook - Dispatch Trigger": {
+      "main": [
+        [{ "node": "Run Scope Drafting", "type": "main", "index": 0 }]
+      ]
+    },
+    "Run Scope Drafting": {
+      "main": [
+        [{ "node": "Run Vendor Dispatch", "type": "main", "index": 0 }]
+      ]
+    },
+    "Run Vendor Dispatch": {
+      "main": [
+        [{ "node": "Wait for Quote Deadline", "type": "main", "index": 0 }]
+      ]
+    },
+    "Wait for Quote Deadline": {
+      "main": [
+        [{ "node": "Fire Quote Deadline Timer", "type": "main", "index": 0 }]
+      ]
+    }
+  }
+}

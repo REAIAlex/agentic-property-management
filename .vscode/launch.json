@@ -1,0 +1,40 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "FastAPI",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": ["app.main:app", "--reload", "--host", "0.0.0.0", "--port", "8000"],
+      "cwd": "${workspaceFolder}/apps/api",
+      "jinja": true,
+      "justMyCode": false,
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "name": "Agent Runner",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": ["main:app", "--reload", "--host", "0.0.0.0", "--port", "8001"],
+      "cwd": "${workspaceFolder}/apps/agent-runner",
+      "jinja": true,
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "name": "Next.js Portal",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/apps/portal",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"]
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Full Stack",
+      "configurations": ["FastAPI", "Agent Runner", "Next.js Portal"]
+    }
+  ]
+}

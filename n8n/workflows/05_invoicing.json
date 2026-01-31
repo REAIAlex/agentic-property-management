@@ -1,0 +1,111 @@
+{
+  "name": "05 - Completion to Invoice + Payment + Reminders",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "work-completed",
+        "responseMode": "lastNode"
+      },
+      "name": "Webhook - Work Completed",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.API_BASE_URL}}/events",
+        "method": "POST",
+        "body": {
+          "event_type": "appointment_completed",
+          "ticket_id": "={{$json.ticket_id}}",
+          "payload": "={{$json}}"
+        }
+      },
+      "name": "Record Completion",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.AGENT_RUNNER_URL}}/run",
+        "method": "POST",
+        "body": {
+          "agent_name": "billing_closeout",
+          "context": "={{$json}}",
+          "ticket_id": "={{$json.ticket_id}}"
+        }
+      },
+      "name": "Run Billing Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [750, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.AGENT_RUNNER_URL}}/run",
+        "method": "POST",
+        "body": {
+          "agent_name": "customer_comms",
+          "context": {
+            "action": "send_invoice_summary",
+            "billing": "={{$json.output}}"
+          }
+        }
+      },
+      "name": "Send Invoice to Owner",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1000, 300]
+    },
+    {
+      "parameters": {
+        "amount": 7,
+        "unit": "days"
+      },
+      "name": "Wait for Payment",
+      "type": "n8n-nodes-base.wait",
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.API_BASE_URL}}/events",
+        "method": "POST",
+        "body": {
+          "event_type": "timer_fired",
+          "ticket_id": "={{$json.ticket_id}}",
+          "payload": {
+            "timer_name": "payment_reminder"
+          }
+        }
+      },
+      "name": "Payment Reminder",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1500, 300]
+    }
+  ],
+  "connections": {
+    "Webhook - Work Completed": {
+      "main": [
+        [{ "node": "Record Completion", "type": "main", "index": 0 }]
+      ]
+    },
+    "Record Completion": {
+      "main": [
+        [{ "node": "Run Billing Agent", "type": "main", "index": 0 }]
+      ]
+    },
+    "Run Billing Agent": {
+      "main": [
+        [{ "node": "Send Invoice to Owner", "type": "main", "index": 0 }]
+      ]
+    },
+    "Send Invoice to Owner": {
+      "main": [
+        [{ "node": "Wait for Payment", "type": "main", "index": 0 }]
+      ]
+    },
+    "Wait for Payment": {
+      "main": [
+        [{ "node": "Payment Reminder", "type": "main", "index": 0 }]
+      ]
+    }
+  }
+}

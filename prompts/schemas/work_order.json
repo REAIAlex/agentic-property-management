@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "WorkOrder",
+  "type": "object",
+  "required": ["ticket_id"],
+  "properties": {
+    "ticket_id": { "type": "string", "format": "uuid" },
+    "vendor_id": { "type": ["string", "null"], "format": "uuid" },
+    "scope_summary": { "type": ["string", "null"] },
+    "scope_line_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "item": { "type": "string" },
+          "description": { "type": "string" },
+          "estimated_hours": { "type": ["number", "null"] }
+        }
+      }
+    },
+    "assumptions": { "type": "array", "items": { "type": "string" } },
+    "completion_evidence_required": { "type": "array", "items": { "type": "string" } },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "sent_to_vendor", "accepted", "in_progress", "completed", "cancelled"]
+    }
+  }
+}

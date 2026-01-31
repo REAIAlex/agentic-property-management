@@ -1,0 +1,78 @@
+{
+  "name": "03 - Quote Received to Owner Approval",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "quote-received",
+        "responseMode": "lastNode"
+      },
+      "name": "Webhook - Quote Received",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.AGENT_RUNNER_URL}}/run",
+        "method": "POST",
+        "body": {
+          "agent_name": "quote_analyst",
+          "context": "={{$json}}",
+          "ticket_id": "={{$json.ticket_id}}"
+        }
+      },
+      "name": "Run Quote Analyst",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.AGENT_RUNNER_URL}}/run",
+        "method": "POST",
+        "body": {
+          "agent_name": "customer_comms",
+          "context": {
+            "action": "send_approval_request",
+            "recipient_type": "owner",
+            "quote_analysis": "={{$json.output}}"
+          },
+          "ticket_id": "={{$json.context.ticket_id}}"
+        }
+      },
+      "name": "Send Approval to Owner",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [750, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.API_BASE_URL}}/events",
+        "method": "POST",
+        "body": {
+          "event_type": "quote_received",
+          "ticket_id": "={{$json.ticket_id}}",
+          "payload": "={{$json}}"
+        }
+      },
+      "name": "Update Ticket Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1000, 300]
+    }
+  ],
+  "connections": {
+    "Webhook - Quote Received": {
+      "main": [
+        [{ "node": "Run Quote Analyst", "type": "main", "index": 0 }]
+      ]
+    },
+    "Run Quote Analyst": {
+      "main": [
+        [{ "node": "Send Approval to Owner", "type": "main", "index": 0 }]
+      ]
+    },
+    "Send Approval to Owner": {
+      "main": [
+        [{ "node": "Update Ticket Status", "type": "main", "index": 0 }]
+      ]
+    }
+  }
+}
